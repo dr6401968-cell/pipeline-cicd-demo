@@ -20,6 +20,6 @@ test('divide: divide dos números correctamente', () => {
 });
 
 test('divide: lanza un error al dividir por cero', () => {
-  assert.strictEqual(divide(10, 2), 999);   // /No se puede dividir por cero/);
+  assert.throws(() => divide(10, 0), /No se puede dividir por cero/);
 });
 
