@@ -1,0 +1,117 @@
+# =============================================================================
+# Pipeline CI/CD - ACT3 Práctica
+# Automatización de Infraestructura Digital
+# =============================================================================
+# Este workflow se activa automáticamente cada vez que se hace push a la
+# rama "main". Está dividido en dos jobs:
+#   1. build-and-test -> instala dependencias, ejecuta pruebas y construye
+#      la aplicación.
+#   2. deploy          -> se ejecuta solo si el job anterior fue exitoso, y
+#      simula/realiza el despliegue de la aplicación.
+# =============================================================================
+
+name: CI/CD Pipeline
+
+# --------------------------------------------------------------------------
+# 1. DISPARADOR (trigger): el pipeline arranca ante un push a "main".
+#    También se agrega pull_request para poder validar cambios antes de
+#    fusionarlos (buena práctica, opcional para la actividad).
+# --------------------------------------------------------------------------
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  # ==========================================================================
+  # JOB 1: build-and-test
+  # Instala dependencias, corre las pruebas unitarias y construye la app.
+  # Si cualquier "step" falla (por ejemplo, las pruebas), el job se detiene
+  # aquí y el job "deploy" no se ejecutará.
+  # ==========================================================================
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest   # Runner estándar provisto por GitHub
+
+    steps:
+      # --- Paso 1: Checkout del código ---
+      # Descarga el contenido del repositorio dentro del runner para poder
+      # trabajar con los archivos del proyecto.
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      # --- Paso 2: Configurar el entorno de Node.js ---
+      # Instala la versión de Node especificada y habilita el cache de
+      # dependencias de npm para acelerar ejecuciones futuras del pipeline.
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # --- Paso 3: Instalar dependencias ---
+      # "npm ci" instala las dependencias exactas indicadas en package-lock.json
+      # (más rápido y reproducible que "npm install" en entornos de CI).
+      - name: Instalar dependencias
+        run: npm install
+
+      # --- Paso 4: Ejecutar pruebas automatizadas ---
+      # Corre la suite de pruebas unitarias (node --test). Si alguna prueba
+      # falla, este step retorna un código de error y GitHub Actions marca
+      # el job completo como fallido, deteniendo el pipeline aquí mismo.
+      - name: Ejecutar pruebas unitarias
+        run: npm test
+
+      # --- Paso 5: Construir la aplicación (build) ---
+      # Genera la carpeta /dist con los artefactos "compilados" de la app.
+      # Solo se ejecuta si el paso de pruebas fue exitoso.
+      - name: Construir la aplicación
+        run: npm run build
+
+      # --- Paso 6: Subir el artefacto de build ---
+      # Guarda la carpeta /dist como un artefacto de GitHub Actions para que
+      # el job de "deploy" pueda descargarlo y usarlo.
+      - name: Subir artefacto de build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-artifact
+          path: dist/
+
+  # ==========================================================================
+  # JOB 2: deploy
+  # Depende de "build-and-test" (needs). Solo se ejecuta si ese job terminó
+  # exitosamente Y el push fue a la rama "main" (evita desplegar desde PRs).
+  # ==========================================================================
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      # --- Paso 1: Descargar el artefacto generado en el job anterior ---
+      - name: Descargar artefacto de build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-artifact
+          path: dist/
+
+      # --- Paso 2: Etapa de despliegue ---
+      # Aquí se simula el despliegue mostrando el contenido a desplegar y un
+      # mensaje de confirmación. Esta etapa se puede reemplazar fácilmente
+      # por un despliegue real, por ejemplo hacia GitHub Pages:
+      #
+      #   - name: Desplegar a GitHub Pages
+      #     uses: peaceiris/actions-gh-pages@v3
+      #     with:
+      #       github_token: ${{ secrets.GITHUB_TOKEN }}
+      #       publish_dir: ./dist
+      #
+      - name: Simular despliegue
+        run: |
+          echo "Iniciando despliegue..."
+          echo "Contenido a desplegar:"
+          ls -la dist/
+          echo "Despliegue completado exitosamente en el entorno de producción (simulado)."

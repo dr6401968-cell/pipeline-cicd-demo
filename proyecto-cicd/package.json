@@ -1,0 +1,13 @@
+{
+  "name": "pipeline-cicd-demo",
+  "version": "1.0.0",
+  "description": "Aplicación de ejemplo para la práctica ACT3 - Construcción de un pipeline CI/CD",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js",
+    "build": "mkdir -p dist && cp src/*.js dist/ && echo 'Build completado: archivos copiados a /dist'"
+  },
+  "author": "",
+  "license": "MIT"
+}
